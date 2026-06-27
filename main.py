@@ -12,6 +12,7 @@ app.include_router(router, dependencies=[Depends(verificar_api_key)])
 origins = [
     "http://localhost:5173",
     "https://chibchaweb-hosting-platform-frontend-production.up.railway.app",
+    "https://chibchaweb-front-production.up.railway.app",
     "https://www.chibchaweb.site",
 ]
 
