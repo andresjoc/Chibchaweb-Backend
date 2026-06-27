@@ -148,9 +148,12 @@ Atentamente,
 El equipo de ChibchaWeb
 """
 )
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
-            smtp.login(remitente, contrasena)
-            smtp.send_message(msg)
+        try:
+            with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=5) as smtp:
+                smtp.login(remitente, contrasena)
+                smtp.send_message(msg)
+        except Exception as email_err:
+            print(f"Error al enviar correo de verificación (registrar2): {email_err}")
 
         # Devolvemos la respuesta con el IDCUENTA generado
         return {"message": "Cuenta, carrito y método de pago registrados exitosamente", "idcuenta": cuenta.IDCUENTA}
@@ -234,9 +237,12 @@ def solicitar_registro(nombre: str, correo: str, password: str, identificacion: 
         f"El equipo de ChibchaWeb"
     )
 
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
-        smtp.login(remitente, contrasena)
-        smtp.send_message(msg)
+    try:
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=5) as smtp:
+            smtp.login(remitente, contrasena)
+            smtp.send_message(msg)
+    except Exception as email_err:
+        print(f"Error al enviar correo de verificación (solicitar-registro): {email_err}")
     return {"mensaje": "Correo enviado con verificación."}
 
 @router.get("/confirmar-registro")
@@ -382,7 +388,7 @@ Si no solicitaste este cambio, ignora este correo.
 """)
 
     try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=5) as smtp:
             smtp.login(remitente, contrasena)
             smtp.send_message(msg)
     except Exception as e:
