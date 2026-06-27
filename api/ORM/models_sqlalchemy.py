@@ -24,7 +24,7 @@ class Cuenta(Base):
     IDPAIS = Column("IDPAIS", Numeric(3), ForeignKey("PAIS.IDPAIS"), nullable=False)
     IDPLAN = Column("IDPLAN", Integer, ForeignKey("PLAN.IDPLAN"), nullable=True)
     TOKEN = Column("TOKEN", String(1084), nullable=False)
-    PASSWORD = Column("PASSWORD", String(50), nullable=False)
+    PASSWORD = Column("PASSWORD", String(255), nullable=False)
     IDENTIFICACION = Column("IDENTIFICACION", String(15), nullable=False)
     NOMBRECUENTA = Column("NOMBRECUENTA", String(150), nullable=False)
     CORREO = Column("CORREO", String(50), nullable=False)
@@ -73,7 +73,7 @@ class MetodoPagoCuenta(Base):
     __tablename__ = "METODOPAGOCUENTA"
 
     IDMETODOPAGOCUENTA = Column("IDMETODOPAGOCUENTA", Integer, primary_key=True, autoincrement=True)  # Aquí está el cambio
-    IDTARJETA = Column("IDTARJETA", String(15), ForeignKey("TARJETA.IDTARJETA"))
+    IDTARJETA = Column("IDTARJETA", Integer, ForeignKey("TARJETA.IDTARJETA"))
     IDCUENTA = Column("IDCUENTA", String(15), ForeignKey("CUENTA.IDCUENTA"))
     IDTIPOMETODOPAGO = Column("IDTIPOMETODOPAGO", Numeric(2), ForeignKey("TIPOMETODOPAGO.IDTIPOMETODOPAGO"))
     ACTIVOMETODOPAGOCUENTA = Column("ACTIVOMETODOPAGOCUENTA", Boolean, nullable=False)
@@ -111,7 +111,7 @@ class Carrito(Base):
     IDCARRITO = Column("IDCARRITO", Integer, primary_key=True, autoincrement=True)
     IDESTADOCARRITO = Column("IDESTADOCARRITO", String(3), ForeignKey("ESTADOCARRITO.IDESTADOCARRITO"), nullable=False)
     IDCUENTA = Column("IDCUENTA", String(15), ForeignKey("CUENTA.IDCUENTA"), nullable=False)
-    IDMETODOPAGOCUENTA = Column("IDMETODOPAGOCUENTA", String(3), ForeignKey("METODOPAGOCUENTA.IDMETODOPAGOCUENTA"), nullable=False)
+    IDMETODOPAGOCUENTA = Column("IDMETODOPAGOCUENTA", Integer, ForeignKey("METODOPAGOCUENTA.IDMETODOPAGOCUENTA"), nullable=False)
 
     ESTADOCARRITO_REL = relationship("EstadoCarrito", backref="carritos")
     facturas = relationship("Factura", back_populates="carrito", cascade="all, delete-orphan")

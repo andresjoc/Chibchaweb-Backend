@@ -422,7 +422,7 @@ def obtener_vigencia_dominios(idcuenta: str = Query(...), db: Session = Depends(
         if vigencia is None:
             dias_restantes = None  # o 0 si prefieres: 0
         else:
-            dias_restantes = (vigencia - hoy).days
+            dias_restantes = (vigencia.date() - hoy).days
 
         dominios_con_vigencia.append({
             "nombre_dominio": nombre,

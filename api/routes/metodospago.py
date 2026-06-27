@@ -6,6 +6,8 @@ from api.DTO.models import ListaMetodoPagoResponse, MetodoPagoUsuario
 import os
 from cryptography.fernet import Fernet
 FERNET_KEY = os.getenv("FERNET_KEY")
+if not FERNET_KEY:
+    raise RuntimeError("Falta la clave FERNET_KEY en el archivo .env")
 
 cipher = Fernet(FERNET_KEY.encode())
 
@@ -35,7 +37,7 @@ def obtener_metodos_pago_usuario(identificacion: str, db: Session = Depends(get_
     for metodo in cuenta.METODOSPAGO:
         if metodo.TARJETA_REL:
             try:
-                decrypted_numero = cipher.decrypt(metodo.TARJETA_REL.NUMEROTARJETA).decode()
+                decrypted_numero = cipher.decrypt(metodo.TARJETA_REL.NUMEROTARJETA.encode()).decode()
             except Exception as e:
                 decrypted_numero = "ERROR"
             metodos.append(MetodoPagoUsuario(

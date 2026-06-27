@@ -6,7 +6,18 @@ from sqlalchemy.orm import Session
 from api.DAO.database import SessionLocal
 from api.ORM.models_sqlalchemy import Cuenta, Carrito, MetodoPagoCuenta, TipoCuenta
 from api.DTO.models import CuentaCreate, LoginRequest,CuentaNombreCorreo, CorreoRequest, CuentaResponse, CuentaAdminUpdateRequest, CambiarTipoCuentaRequest, CambiarContrasenaRequest,RestablecerContrasenaRequest, SolicitarRecuperacionRequest
-from passlib.hash import bcrypt
+import bcrypt
+
+def hash_password(password: str) -> str:
+    salt = bcrypt.gensalt()
+    return bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    try:
+        return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+    except Exception:
+        return False
+
 import random
 import string
 import os
@@ -36,7 +47,7 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
     if not cuenta:
         raise HTTPException(status_code=404, detail="Cuenta no encontrada")
 
-    if not bcrypt.verify(data.password, cuenta.PASSWORD):
+    if not verify_password(data.password, cuenta.PASSWORD):
         raise HTTPException(status_code=401, detail="Contraseña incorrecta")
 
     return {
@@ -68,7 +79,7 @@ def registrar_cuenta2(cuenta_data: CuentaCreate, db: Session = Depends(get_db)):
         idcuenta = f"{random.randint(1, 9)}{now_str}"
         token_verificacion = generar_token_corto()
         # Hashing de la contraseña
-        hashed_password = bcrypt.hash(cuenta_data.password)
+        hashed_password = hash_password(cuenta_data.password)
 
         # Creación de la cuenta en la base de datos
         cuenta = Cuenta(
@@ -175,7 +186,7 @@ def obtener_cuenta_por_correo(data: CorreoRequest, db: Session = Depends(get_db)
 
 
 @router.post("/solicitar-registro")
-def solicitar_registro(nombre: str, correo: str, password: str, identificacion: str, telefono: str, db: Session = Depends(SessionLocal)):
+def solicitar_registro(nombre: str, correo: str, password: str, identificacion: str, telefono: str, db: Session = Depends(get_db)):
     cuenta = db.query(Cuenta).filter(Cuenta.CORREO == correo).first()
 
     if cuenta:
@@ -185,6 +196,11 @@ def solicitar_registro(nombre: str, correo: str, password: str, identificacion: 
             token = cuenta.TOKEN  # Reutilizamos
     else:
         token = str(uuid.uuid4())
+        try:
+            telefono_int = int(telefono)
+        except ValueError:
+            telefono_int = 0
+            
         nueva = Cuenta(
             IDCUENTA=str(uuid.uuid4())[:15],
             IDTIPOCUENTA=1,
@@ -193,8 +209,8 @@ def solicitar_registro(nombre: str, correo: str, password: str, identificacion: 
             IDENTIFICACION=identificacion,
             NOMBRECUENTA=nombre,
             CORREO=correo,
-            TELEFONO=telefono,
-            FECHAREGISTRO=datetime.today(),
+            TELEFONO=telefono_int,
+            FECHAREGISTRO=datetime.today().date(),
             DIRECCION="",
             TOKEN=token
         )
@@ -204,15 +220,22 @@ def solicitar_registro(nombre: str, correo: str, password: str, identificacion: 
     # ENVÍO DEL CORREO
 
     remitente = os.getenv("EMAIL_REMITENTE")
-    contraseña = os.getenv("EMAIL_CONTRASENA") 
+    contrasena = os.getenv("EMAIL_CONTRASENA") 
 
     msg = EmailMessage()
     msg["Subject"] = "Verificación de cuenta en ChibchaWeb"
     msg["From"] = formataddr(("ChibchaWeb", remitente))
     msg["To"] = correo
+    msg.set_content(
+        f"Hola {nombre},\n\n"
+        f"Gracias por registrarte en ChibchaWeb. Tu código de verificación es:\n\n"
+        f"Código: {token}\n\n"
+        f"Atentamente,\n"
+        f"El equipo de ChibchaWeb"
+    )
 
     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
-        smtp.login(remitente, contraseña)
+        smtp.login(remitente, contrasena)
         smtp.send_message(msg)
     return {"mensaje": "Correo enviado con verificación."}
 
@@ -309,13 +332,13 @@ def cambiar_contrasena(data: CambiarContrasenaRequest, db: Session = Depends(get
     if not cuenta:
         raise HTTPException(status_code=404, detail="Cuenta no encontrada")
 
-    if not bcrypt.verify(data.contrasena_actual, cuenta.PASSWORD):
+    if not verify_password(data.contrasena_actual, cuenta.PASSWORD):
         raise HTTPException(status_code=401, detail="La contraseña actual no es válida")
 
-    if bcrypt.verify(data.contrasena_nueva, cuenta.PASSWORD):
+    if verify_password(data.contrasena_nueva, cuenta.PASSWORD):
         raise HTTPException(status_code=400, detail="La nueva contraseña no puede ser igual a la actual")
 
-    cuenta.PASSWORD = bcrypt.hash(data.contrasena_nueva)
+    cuenta.PASSWORD = hash_password(data.contrasena_nueva)
     db.commit()
 
     return {"mensaje": "Contraseña actualizada correctamente"}
@@ -337,7 +360,7 @@ def solicitar_recuperacion(data: SolicitarRecuperacionRequest, db: Session = Dep
 
     # Enviar correo
     remitente = os.getenv("EMAIL_REMITENTE")
-    contraseña = os.getenv("EMAIL_CONTRASENA")
+    contrasena = os.getenv("EMAIL_CONTRASENA")
 
     msg = EmailMessage()
     msg["Subject"] = "Recuperación de contraseña – ChibchaWeb"
@@ -360,7 +383,7 @@ Si no solicitaste este cambio, ignora este correo.
 
     try:
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
-            smtp.login(remitente, contraseña)
+            smtp.login(remitente, contrasena)
             smtp.send_message(msg)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al enviar el correo: {e}")
@@ -377,10 +400,10 @@ def restablecer_contrasena(data: RestablecerContrasenaRequest, db: Session = Dep
     if cuenta.TOKEN != data.token:
         raise HTTPException(status_code=400, detail="Código de recuperación inválido.")
 
-    if bcrypt.verify(data.nueva_contrasena, cuenta.PASSWORD):
+    if verify_password(data.nueva_contrasena, cuenta.PASSWORD):
         raise HTTPException(status_code=400, detail="La nueva contraseña no puede ser igual a la actual.")
 
-    cuenta.PASSWORD = bcrypt.hash(data.nueva_contrasena)
+    cuenta.PASSWORD = hash_password(data.nueva_contrasena)
     cuenta.TOKEN = "NA"  # Invalidamos el token
     db.commit()
 

@@ -26,8 +26,8 @@ def get_db():
 @router.post("/tarjeta")
 def registrar_tarjeta(tarjeta_data: TarjetaCreate, db: Session = Depends(get_db)):
     try:
-        encrypted_numero_tarjeta = cipher.encrypt(str(tarjeta_data.numerotarjeta).encode())
-        encrypted_ccv = cipher.encrypt(str(tarjeta_data.ccv).encode())
+        encrypted_numero_tarjeta = cipher.encrypt(str(tarjeta_data.numerotarjeta).encode()).decode()
+        encrypted_ccv = cipher.encrypt(str(tarjeta_data.ccv).encode()).decode()
 
         nueva_tarjeta = Tarjeta(
             IDTIPOTARJETA=tarjeta_data.idtipotarjeta,
