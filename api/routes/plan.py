@@ -1,17 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from api.ORM.models_sqlalchemy import Cuenta, Plan
-from ..DAO.database import SessionLocal
+from ..DAO.database import get_db
 from api.DTO.models import MiPlanResponse, CambiarPlanRequest, PlanResponse
 
 router = APIRouter()
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+
 
 @router.get("/MiPlan", response_model=MiPlanResponse)
 def obtener_mi_plan(idcuenta: str = Query(...), db: Session = Depends(get_db)):

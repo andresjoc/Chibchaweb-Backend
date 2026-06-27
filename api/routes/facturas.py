@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlalchemy.orm import Session
-from api.DAO.database import SessionLocal
-from api.ORM.models_sqlalchemy import Factura, Cuenta, Carrito, CarritoDominio, Dominio, MetodoPagoCuenta, FacturaPaquete,Plan
+from api.DAO.database import get_db
+from api.ORM.models_sqlalchemy import Factura, Cuenta, Carrito, CarritoDominio, Dominio, MetodoPagoCuenta, FacturaPaquete, Plan
 import smtplib
 from email.message import EmailMessage
 from reportlab.pdfgen import canvas
@@ -13,15 +13,7 @@ from reportlab.lib.utils import ImageReader
 from sqlalchemy import func
 from datetime import date, timedelta
 
-
 router = APIRouter()
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 @router.get("/ObtenerFacturas")
 def obtener_facturas(idcuenta: str, db: Session = Depends(get_db)):

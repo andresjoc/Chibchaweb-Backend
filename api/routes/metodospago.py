@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
-from api.DAO.database import SessionLocal
+from api.DAO.database import get_db
 from api.ORM.models_sqlalchemy import Cuenta, MetodoPagoCuenta, Tarjeta
 from api.DTO.models import ListaMetodoPagoResponse, MetodoPagoUsuario
 import os
@@ -12,13 +12,6 @@ if not FERNET_KEY:
 cipher = Fernet(FERNET_KEY.encode())
 
 router = APIRouter()
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 
 @router.get("/metodosPagoUsuario", response_model=ListaMetodoPagoResponse)

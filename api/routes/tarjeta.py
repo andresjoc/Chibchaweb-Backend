@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from api.DAO.database import SessionLocal
+from api.DAO.database import get_db
 from api.DTO.models import MetodoPagoCuentaCreate, TarjetaCreate, TarjetaRequest
 from api.ORM.models_sqlalchemy import MetodoPagoCuenta, Tarjeta
 from cryptography.fernet import Fernet
@@ -16,12 +16,7 @@ cipher = Fernet(FERNET_KEY.encode())
 
 router = APIRouter()
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+
 
 @router.post("/tarjeta")
 def registrar_tarjeta(tarjeta_data: TarjetaCreate, db: Session = Depends(get_db)):

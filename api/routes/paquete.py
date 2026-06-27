@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
-from api.DAO.database import SessionLocal
+from sqlalchemy.orm import Session, joinedload
+from api.DAO.database import get_db
 from api.DTO.models import CrearPaqueteRequest, PaqueteResponse, InfoPaqueteResponse, MiPaqueteResponse, ComprarPaqueteRequest, ModificarPaqueteRequest, EliminarPaqueteRequest, ItemFacturaResponse, ActualizarItemFacturaRequest
 from api.ORM.models_sqlalchemy import InfoPaqueteHosting, PaqueteHosting, MetodoPagoCuenta, FacturaPaquete, ItemPaquete
 from typing import List, Optional
@@ -10,12 +10,7 @@ import random
 
 router = APIRouter()
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+
 
 @router.post("/CrearPaquete")
 def crear_paquete(data: CrearPaqueteRequest, db: Session = Depends(get_db)):
@@ -54,7 +49,7 @@ def crear_paquete(data: CrearPaqueteRequest, db: Session = Depends(get_db)):
     
 @router.get("/Paquetes", response_model=List[PaqueteResponse])
 def obtener_paquetes(db: Session = Depends(get_db)):
-    paquetes = db.query(PaqueteHosting).all()
+    paquetes = db.query(PaqueteHosting).options(joinedload(PaqueteHosting.infopaquete)).all()
     if not paquetes:
         raise HTTPException(status_code=404, detail="No hay paquetes disponibles")
 

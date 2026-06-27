@@ -1,17 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from api.DAO.database import SessionLocal
+from api.DAO.database import get_db
 from api.DTO.models import TraduccionRequest
 from api.ORM.models_sqlalchemy import Traduccion
 
 router = APIRouter()
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+
 
 @router.get("/traduccion")
 def obtener_traduccion(

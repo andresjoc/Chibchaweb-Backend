@@ -1,18 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
-from api.DAO.database import SessionLocal
+from api.DAO.database import get_db
 from api.DTO.models import FacturaCreate, CarritoEstadoUpdate, ComisionUpdateRequest
 from api.ORM.models_sqlalchemy import Factura, Carrito, Plan, CarritoDominio, Dominio, MetodoPagoCuenta, Cuenta
 
 router = APIRouter()
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+
 
 @router.post("/realizarPago")
 def realizar_pago(data: FacturaCreate, db: Session = Depends(get_db)):
@@ -75,12 +70,7 @@ def modificar_comision(data: ComisionUpdateRequest, db: Session = Depends(get_db
     }
 
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+
         
 @router.get("/ahorro-distribuidor")
 def calcular_ahorro_distribuidor(

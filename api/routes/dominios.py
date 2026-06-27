@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from api.DTO.models import DomainRequest, DomainStatus, AlternativesResponse, DominioCreate, DominioEnCarrito, ActualizarOcupadoDominioRequestList, AgregarDominioRequest,TransferenciaDominioRequest,GenerarDominiosRequest
 from api.ORM.models_sqlalchemy import Dominio, CarritoDominio, Cuenta, MetodoPagoCuenta, Carrito, Factura
 from sqlalchemy.orm import Session
-from ..DAO.database import SessionLocal
+from ..DAO.database import get_db
+from concurrent.futures import ThreadPoolExecutor
 import requests
 from typing import List
 from bs4 import BeautifulSoup
@@ -43,13 +44,7 @@ def enviar_xml_por_correo(nombre_archivo: str, contenido_bytes: bytes, destinata
         smtp.send_message(msg)
 
 
-# Dependency para obtener una sesión DB
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+
 
 # Web Scraping para WHOIS
 def get_html(domain: str) -> str:
@@ -85,37 +80,39 @@ def parse_data(html: str) -> dict:
 @router.post("/DominiosDisponible", response_model=AlternativesResponse)
 def verificar_extensiones(data: DomainRequest, db: Session = Depends(get_db)):
     base = data.domain.strip().lower()
-    alternativas = []
+    dominios_buscados = [f"{base}.{ext}" for ext in EXTENSIONS]
 
-    # Verificar si el dominio ya está en la base de datos y si está ocupado
-    for ext in EXTENSIONS:
+    # Consulta en lote para verificar cuáles dominios están ocupados en la base de datos
+    dominios_ocupados_db = {
+        d.IDDOMINIO for d in db.query(Dominio)
+        .filter(Dominio.IDDOMINIO.in_(dominios_buscados), Dominio.OCUPADO == True)
+        .all()
+    }
+
+    def check_online_availability(ext):
         dominio = f"{base}.{ext}"
+        try:
+            html = get_html(dominio)
+            info = parse_data(html)
+            return DomainStatus(
+                domain=dominio,
+                registered=info["registered"],
+                expires=info["expires"]
+            )
+        except Exception:
+            return DomainStatus(
+                domain=dominio,
+                registered=False,
+                expires=None
+            )
 
-        # Comprobar si el dominio está ocupado en la base de datos (OCUPADO = 1)
-        dominio_db = db.query(Dominio).filter_by(IDDOMINIO=dominio, OCUPADO=True).first()
+    # Filtrar solo las extensiones que no están ocupadas en la base de datos para consultarlas en paralelo
+    extensiones_a_consultar = [ext for ext in EXTENSIONS if f"{base}.{ext}" not in dominios_ocupados_db]
 
-        if dominio_db:
-            # Si el dominio está ocupado, no agregarlo a las alternativas
-            continue
-        else:
-            try:
-                # Si el dominio no está ocupado, verificamos disponibilidad en línea
-                html = get_html(dominio)
-                info = parse_data(html)
-                alternativas.append(DomainStatus(
-                    domain=dominio,
-                    registered=info["registered"],
-                    expires=info["expires"]
-                ))
-            except:
-                # Si la verificación en línea falla, lo marcamos como no disponible
-                alternativas.append(DomainStatus(
-                    domain=dominio,
-                    registered=False,
-                    expires=None
-                ))
+    with ThreadPoolExecutor(max_workers=max(len(extensiones_a_consultar), 1)) as executor:
+        resultados = list(executor.map(check_online_availability, extensiones_a_consultar))
 
-    return AlternativesResponse(domain=base, alternativas=alternativas)
+    return AlternativesResponse(domain=base, alternativas=resultados)
 
 
 

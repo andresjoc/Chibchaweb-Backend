@@ -2,16 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
 from api.DTO.models import CarritoCreate, CarritoDominioCreate, CarritoUpdate, CarritoDominioDelete
 from api.ORM.models_sqlalchemy import Carrito, CarritoDominio, Dominio
-from api.DAO.database import SessionLocal
+from api.DAO.database import get_db
 
 router = APIRouter()
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 
 @router.post("/agregarCarrito")

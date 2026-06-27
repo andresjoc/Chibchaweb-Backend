@@ -3,7 +3,7 @@ from typing import List
 from datetime import datetime
 import random
 from sqlalchemy.orm import Session
-from api.DAO.database import SessionLocal
+from api.DAO.database import get_db
 from api.ORM.models_sqlalchemy import Cuenta, Carrito, MetodoPagoCuenta, TipoCuenta
 from api.DTO.models import CuentaCreate, LoginRequest,CuentaNombreCorreo, CorreoRequest, CuentaResponse, CuentaAdminUpdateRequest, CambiarTipoCuentaRequest, CambiarContrasenaRequest,RestablecerContrasenaRequest, SolicitarRecuperacionRequest
 import bcrypt
@@ -29,12 +29,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.exc import SQLAlchemyError
 router = APIRouter()
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+
 
 @router.post("/login")
 def login(data: LoginRequest, db: Session = Depends(get_db)):
